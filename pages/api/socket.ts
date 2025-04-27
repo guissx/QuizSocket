@@ -6,7 +6,7 @@ import type { Server as HTTPServer } from "http";
 import type { Socket as NetSocket } from "net";
 import axios from 'axios';
 
-// Tipos para perguntas
+// Tipos
 interface Pergunta {
   id: string;
   texto: string;
@@ -14,7 +14,6 @@ interface Pergunta {
   correta: number;
 }
 
-// Tipo vindo da API externa 
 interface PerguntaAPI {
   question: string;
   incorrect_answers: string[];
@@ -74,7 +73,6 @@ type NextApiResponseServerIO = NextApiResponse & {
   };
 };
 
-// Categorias disponíveis
 const categorias = [
   { id: 9, nome: "Conhecimentos Gerais" },
   { id: 18, nome: "Computação" },
@@ -94,33 +92,28 @@ async function fetchQuestions(category: number): Promise<Pergunta[]> {
     return questionCache.get(category)!;
   }
 
-  try {
-    const response = await axios.get(
-      `https://opentdb.com/api.php?amount=10&category=${category}&type=multiple&encode=url3986`
-    );
+  const response = await axios.get(
+    `https://opentdb.com/api.php?amount=10&category=${category}&type=multiple&encode=url3986`
+  );
 
-    const perguntas = response.data.results.map((q: PerguntaAPI) => {
-      const alternativas = [
-        ...q.incorrect_answers.map((a) => decodeURIComponent(a)),
-        decodeURIComponent(q.correct_answer),
-      ];
-      const alternativasEmbaralhadas = shuffleArray(alternativas);
-      const corretaIndex = alternativasEmbaralhadas.indexOf(decodeURIComponent(q.correct_answer));
+  const perguntas = response.data.results.map((q: PerguntaAPI) => {
+    const alternativas = [
+      ...q.incorrect_answers.map((a) => decodeURIComponent(a)),
+      decodeURIComponent(q.correct_answer),
+    ];
+    const alternativasEmbaralhadas = shuffleArray(alternativas);
+    const corretaIndex = alternativasEmbaralhadas.indexOf(decodeURIComponent(q.correct_answer));
 
-      return {
-        id: Math.random().toString(36).substring(7),
-        texto: decodeURIComponent(q.question),
-        alternativas: alternativasEmbaralhadas,
-        correta: corretaIndex,
-      };
-    });
+    return {
+      id: Math.random().toString(36).substring(7),
+      texto: decodeURIComponent(q.question),
+      alternativas: alternativasEmbaralhadas,
+      correta: corretaIndex,
+    };
+  });
 
-    questionCache.set(category, perguntas);
-    return perguntas;
-  } catch (error) {
-    console.error("Erro ao buscar perguntas:", error);
-    throw error;
-  }
+  questionCache.set(category, perguntas);
+  return perguntas;
 }
 
 export const config = {
@@ -167,61 +160,53 @@ export default function handler(req: NextApiRequest, res: NextApiResponseServerI
           });
 
           enviarPergunta(socket);
-        } catch (error) {
-          console.error("Erro ao selecionar tema:", error);
+        } catch (err) {
+          console.error("Erro ao selecionar tema:", err);
           socket.emit("error", "Falha ao carregar perguntas. Tente novamente.");
         }
       });
 
       socket.on("resposta", (indice: number) => {
-        try {
-          const playerData = pontuacoes[socket.id];
-          if (!playerData || playerData.currentIndex >= playerData.perguntas.length) {
-            throw new Error("Estado do jogo inválido");
-          }
-
-          const perguntaAtual = playerData.perguntas[playerData.currentIndex];
-
-          if (indice < 0 || indice >= perguntaAtual.alternativas.length) {
-            throw new Error("Índice de resposta inválido");
-          }
-
-          const correta = perguntaAtual.correta === indice;
-          if (correta) playerData.score += 1;
-
-          socket.emit("resultado", {
-            correta,
-            respostaCorreta: perguntaAtual.correta,
-            pontuacao: playerData.score,
-          });
-
-          playerData.currentIndex++;
-        } catch (error) {
-          console.error("Erro ao processar resposta:", error);
-          socket.emit("error", error instanceof Error ? error.message : "Erro desconhecido");
+        const playerData = pontuacoes[socket.id];
+        if (!playerData || playerData.currentIndex >= playerData.perguntas.length) {
+          socket.emit("error", "Estado do jogo inválido.");
+          return;
         }
+
+        const perguntaAtual = playerData.perguntas[playerData.currentIndex];
+
+        if (indice < 0 || indice >= perguntaAtual.alternativas.length) {
+          socket.emit("error", "Índice de resposta inválido.");
+          return;
+        }
+
+        const correta = perguntaAtual.correta === indice;
+        if (correta) playerData.score += 1;
+
+        socket.emit("resultado", {
+          correta,
+          respostaCorreta: perguntaAtual.correta,
+          pontuacao: playerData.score,
+        });
+
+        playerData.currentIndex++;
       });
 
       socket.on("proxima_pergunta", () => {
-        try {
-          const playerData = pontuacoes[socket.id];
-          if (!playerData) {
-            throw new Error("Jogador não encontrado");
-          }
+        const playerData = pontuacoes[socket.id];
+        if (!playerData) {
+          socket.emit("error", "Jogador não encontrado.");
+          return;
+        }
 
-          if (playerData.currentIndex < playerData.perguntas.length) {
-            enviarPergunta(socket);
-          } else {
-            const resultadoFinal: FimJogo = {
-              pontuacao: playerData.score,
-              totalPerguntas: playerData.perguntas.length,
-            };
-            socket.emit("fim", resultadoFinal);
-            agendarLimpezaPontuacao(socket.id);
-          }
-        } catch (error) {
-          console.error("Erro ao avançar pergunta:", error);
-          socket.emit("error", error instanceof Error ? error.message : "Erro desconhecido");
+        if (playerData.currentIndex < playerData.perguntas.length) {
+          enviarPergunta(socket);
+        } else {
+          socket.emit("fim", {
+            pontuacao: playerData.score,
+            totalPerguntas: playerData.perguntas.length,
+          });
+          agendarLimpezaPontuacao(socket.id);
         }
       });
 
@@ -239,7 +224,6 @@ export default function handler(req: NextApiRequest, res: NextApiResponseServerI
 function enviarPergunta(socket: Socket<ClientToServerEvents, ServerToClientEvents>): void {
   const playerData = pontuacoes[socket.id];
   if (!playerData || playerData.currentIndex >= playerData.perguntas.length) {
-    console.error("Não foi possível enviar pergunta: estado inválido");
     return;
   }
 
@@ -253,12 +237,9 @@ function agendarLimpezaPontuacao(socketId: string): void {
 }
 
 function limparPontuacao(socketId: string): void {
-  if (pontuacoes[socketId]) {
-    delete pontuacoes[socketId];
-  }
+  delete pontuacoes[socketId];
 }
 
-// Função para embaralhar alternativas
 function shuffleArray<T>(array: T[]): T[] {
   const newArray = [...array];
   for (let i = newArray.length - 1; i > 0; i--) {
