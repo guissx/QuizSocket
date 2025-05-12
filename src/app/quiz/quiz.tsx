@@ -133,7 +133,7 @@ export default function QuizGame() {
         <div className="w-full max-w-md bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-2xl p-8 text-center border border-gray-700/50 animate-fade-in">
           <div className="mb-8">
             <h1 className="text-5xl font-extrabold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-600">
-              QuizMaster
+              Quiz Do Guis
             </h1>
             <p className="text-lg text-gray-300">Escolha um tema para começar!</p>
           </div>
