@@ -1,5 +1,34 @@
  # Quiz Game - Servidor Socket.io: Guia de Integração e API
 
+---
+
+## 🚀 Como rodar o projeto localmente
+
+Siga os passos abaixo para configurar e executar o projeto:
+
+### 1. Clone o repositório
+
+```bash
+git clone https://github.com/guissx/QuizSocket.git
+```
+
+### 2. Acesse a pasta do projeto
+
+```bash
+cd QuizSocket
+```
+
+### 3. Instale as dependências
+
+```bash
+npm install
+```
+
+### 4. Inicie o servidor (modo desenvolvimento)
+
+```bash
+npm run dev
+```
 ## 📌 Visão Geral
 
 Este documento descreve o servidor de perguntas e respostas (quiz) implementado com **Node.js** e **Socket.io**. O sistema permite que múltiplos clientes se conectem de forma simultânea para participar de jogos de quiz. O servidor é responsável por gerenciar todo o ciclo de vida do jogo, incluindo a seleção de categorias, o fornecimento de perguntas, a validação de respostas e o cálculo da pontuação dos jogadores. As perguntas utilizadas no quiz são obtidas dinamicamente através da API pública **OpenTDB (Open Trivia Database - `https://opentdb.com`)**. O design do servidor facilita sua integração em diversas aplicações, sendo compatível com ambientes que utilizam frameworks como Next.js, conforme demonstrado pela estrutura do código-fonte de referência.
